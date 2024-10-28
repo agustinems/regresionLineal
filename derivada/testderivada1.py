@@ -9,7 +9,7 @@ def diferencia_tres_puntos_funcion(funcion, a, b, h):
     y_vals = funcion(x_vals)
 
     dy = diferencia_tres_puntos(x_vals, y_vals)
-    return x_vals, dy
+    return x_vals, y_vals, dy
 
 def diferencia_tres_puntos(x, y):
     """
@@ -40,7 +40,7 @@ def diferencia_cinco_puntos_funcion(funcion, a, b, h):
     y_vals = funcion(x_vals)
 
     dy = diferencia_cinco_puntos(x_vals, y_vals)
-    return x_vals, dy
+    return x_vals, y_vals, dy
 
 def diferencia_cinco_puntos(x, y):
     """
@@ -67,6 +67,19 @@ def diferencia_cinco_puntos(x, y):
     dy[-1] = (25 * y[-1] - 48 * y[-2] + 36 * y[-3] - 16 * y[-4] + 3 * y[-5]) / (12 * h)
 
     return dy
+
+def generar_tabla_derivadas(puntos):
+    print("X\t\tf(X)\t\tf'(X)\t\tTipo de diferencia\tDerivada Exacta\t\tError")
+    for i, (x, fx, dfx, dfx_exacta, error) in enumerate(puntos):
+        if i == 0:
+            tipo = "Progresiva"
+        elif i == len(puntos) - 1:
+            tipo = "Regresiva"
+        else:
+            tipo = "Centrada"
+        dfx_exacta_str = f"{dfx_exacta:.10f}" if dfx_exacta is not None else "N/A"
+        error_str = f"{error:.10f}" if error is not None else "N/A"
+        print(f"{x:.5f}\t{fx:.10f}\t{dfx:.10f}\t{tipo}\t\t{dfx_exacta_str}\t{error_str}")
 
 # Programa principal
 
@@ -129,20 +142,26 @@ if opcion == "1":
     h = float(input("Ingresa el tamaño del paso (h): "))
 
     # Calcular la derivada numérica
-    x_vals, derivadas_aprox = diferencia_funcion(funcion, a, b, h)
+    x_vals, y_vals, derivadas_aprox = diferencia_funcion(funcion, a, b, h)
 
     # Calcular la derivada exacta y el error
     derivadas_exactas = derivada(x_vals)
     errores = np.abs(derivadas_aprox - derivadas_exactas)
 
+    # Preparar los datos para la tabla
+    puntos = list(zip(x_vals, y_vals, derivadas_aprox, derivadas_exactas, errores))
+
 elif opcion == "2":
-    print("Ingresa los valores de x separados por comas:")
+    print("Ingresa los valores de x separados por punto y coma ';':")
     x_vals_input = input()
-    print("Ingresa los valores de y separados por comas:")
+    print("Ingresa los valores de y separados por punto y coma ';':")
     y_vals_input = input()
     try:
-        x_vals = np.array([float(x.strip()) for x in x_vals_input.split(',')])
-        y_vals = np.array([float(y.strip()) for y in y_vals_input.split(',')])
+        # Reemplazar comas decimales por puntos y eliminar espacios
+        x_vals_input = x_vals_input.replace(',', '.').replace(' ', '')
+        y_vals_input = y_vals_input.replace(',', '.').replace(' ', '')
+        x_vals = np.array([float(x) for x in x_vals_input.split(';')])
+        y_vals = np.array([float(y) for y in y_vals_input.split(';')])
     except ValueError:
         print("Error al interpretar los valores de x o y. Asegúrate de ingresarlos correctamente.")
         exit()
@@ -151,9 +170,9 @@ elif opcion == "2":
         print("Las longitudes de x e y deben ser iguales.")
         exit()
 
-    # Verificar si el paso es uniforme
+    # Verificar si el paso es uniforme con tolerancia
     h_values = np.diff(x_vals)
-    if not np.allclose(h_values, h_values[0]):
+    if not np.allclose(h_values, h_values[0], atol=1e-8):
         print("Los valores de x no están uniformemente espaciados.")
         exit()
     h = h_values[0]
@@ -164,23 +183,15 @@ elif opcion == "2":
         print("Error al calcular la derivada:", e)
         exit()
 
+    # Preparar los datos para la tabla
     derivadas_exactas = [None] * len(x_vals)
     errores = [None] * len(x_vals)
+    puntos = list(zip(x_vals, y_vals, derivadas_aprox, derivadas_exactas, errores))
 
 else:
     print("Opción no válida.")
     exit()
 
-# Imprimir la tabla de resultados
-print("\n{:<15}{:<25}{:<25}{:<25}".format("x", "Derivada Aproximada", "Derivada Exacta", "Error"))
-print("-" * 90)
-for xi, dyi_aprox, dyi_exacta, error in zip(x_vals, derivadas_aprox, derivadas_exactas, errores):
-    xi_str = f"{xi:.5f}"
-    dyi_aprox_str = f"{dyi_aprox:.10f}"
-    if dyi_exacta is not None and error is not None:
-        dyi_exacta_str = f"{dyi_exacta:.10f}"
-        error_str = f"{error:.10f}"
-    else:
-        dyi_exacta_str = "N/A"
-        error_str = "N/A"
-    print("{:<15}{:<25}{:<25}{:<25}".format(xi_str, dyi_aprox_str, dyi_exacta_str, error_str))
+# Generar la tabla de resultados
+print("\nResultados de la diferenciación numérica usando el método de {}:\n".format(metodo_nombre))
+generar_tabla_derivadas(puntos)
